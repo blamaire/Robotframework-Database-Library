@@ -60,20 +60,7 @@ class Query(object):
             cur = self._dbconnection.cursor()
             logger.info('Executing : Query  |  %s ' % selectStatement)
             self.__execute_sql(cur, selectStatement)
-            allRows = cur.fetchall()
-
-            if returnAsDict:
-                mappedRows = []
-                col_names = [c[0] for c in cur.description]
-
-                for rowIdx in range(len(allRows)):
-                    d = {}
-                    for colIdx in range(len(allRows[rowIdx])):
-                        d[col_names[colIdx]] = allRows[rowIdx][colIdx]
-                    mappedRows.append(d)
-                return mappedRows
-
-            return allRows
+            return self._formatResults(returnAsDict)
         finally:
             if cur:
                 if not sansTran:
@@ -318,6 +305,9 @@ class Query(object):
                 if not sansTran:
                     self._dbconnection.rollback()
 
+    def script_result(self, returnAsDict=False):
+        return self._formatResults(returnAsDict)
+
     def call_stored_procedure(self, spName, spParams=None, sansTran=False):
         """
         Uses the inputs of `spName` and 'spParams' to call a stored procedure. Set optional input `sansTran` to
@@ -369,3 +359,17 @@ class Query(object):
 
     def __execute_sql(self, cur, sqlStatement):
         return cur.execute(sqlStatement)
+
+    def _formatResults(self, returnAsDict):
+        cur = self._dbconnection.cursor
+        allRows = cur.fetchall()
+        if returnAsDict:
+            mappedRows = []
+            col_names = [c[0] for c in cur.description]
+            for rowIdx in range(len(allRows)):
+                d = {}
+                for colIdx in range(len(allRows[rowIdx])):
+                    d[col_names[colIdx]] = allRows[rowIdx][colIdx]
+                mappedRows.append(d)
+            return mappedRows
+        return allRows
