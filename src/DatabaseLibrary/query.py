@@ -60,20 +60,7 @@ class Query(object):
             cur = self._dbconnection.cursor()
             logger.info('Executing : Query  |  %s ' % selectStatement)
             self.__execute_sql(cur, selectStatement)
-            allRows = cur.fetchall()
-
-            if returnAsDict:
-                mappedRows = []
-                col_names = [c[0] for c in cur.description]
-
-                for rowIdx in range(len(allRows)):
-                    d = {}
-                    for colIdx in range(len(allRows[rowIdx])):
-                        d[col_names[colIdx]] = allRows[rowIdx][colIdx]
-                    mappedRows.append(d)
-                return mappedRows
-
-            return allRows
+            return self._formatResults(cur, returnAsDict)
         finally:
             if cur:
                 if not sansTran:
@@ -194,7 +181,7 @@ class Query(object):
                 if not sansTran:
                     self._dbconnection.rollback()
 
-    def execute_sql_script(self, sqlScriptFileName, sansTran=False):
+    def execute_sql_script(self, sqlScriptFileName, sansTran=False, returnAsDict=False):
         """
         Executes the content of the `sqlScriptFileName` as SQL commands. Useful for setting the database to a known
         state before running your tests, or clearing out your test data after running each a test. Set optional input
@@ -285,12 +272,13 @@ class Query(object):
 
             if not sansTran:
                 self._dbconnection.commit()
+            return self._formatResults(cur, returnAsDict)
         finally:
             if cur:
                 if not sansTran:
                     self._dbconnection.rollback()
 
-    def execute_sql_string(self, sqlString, sansTran=False):
+    def execute_sql_string(self, sqlString, sansTran=False, returnAsDict=False):
         """
         Executes the sqlString as SQL commands. Useful to pass arguments to your sql. Set optional input `sansTran` to
         True to run command without an explicit transaction commit or rollback.
@@ -313,6 +301,7 @@ class Query(object):
             self.__execute_sql(cur, sqlString)
             if not sansTran:
                 self._dbconnection.commit()
+            return self._formatResults(cur, returnAsDict)
         finally:
             if cur:
                 if not sansTran:
@@ -369,3 +358,16 @@ class Query(object):
 
     def __execute_sql(self, cur, sqlStatement):
         return cur.execute(sqlStatement)
+
+    def _formatResults(self, cur, returnAsDict):
+        allRows = cur.fetchall()
+        if returnAsDict:
+            mappedRows = []
+            col_names = [c[0] for c in cur.description]
+            for rowIdx in range(len(allRows)):
+                d = {}
+                for colIdx in range(len(allRows[rowIdx])):
+                    d[col_names[colIdx]] = allRows[rowIdx][colIdx]
+                mappedRows.append(d)
+            return mappedRows
+        return allRows
